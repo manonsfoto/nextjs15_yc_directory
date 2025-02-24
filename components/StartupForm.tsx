@@ -7,17 +7,15 @@ import MDEditor from "@uiw/react-md-editor";
 import { Button } from "./ui/button";
 import { Send } from "lucide-react";
 import { formSchema } from "@/lib/validation";
+import { z } from "zod";
+import { useRouter } from "next/navigation";
 
 const StartupForm = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pitch, setPitch] = useState("");
+  const router = useRouter();
   const handleFormSubmit = async (prevState: unknown, formData: FormData) => {
     try {
-      const headers = new Headers();
-      headers.forEach((value, key) => {
-        console.log(`${key}: ${value}`);
-      });
-
       const formValues = {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
@@ -26,13 +24,25 @@ const StartupForm = () => {
         pitch,
       };
       await formSchema.parseAsync(formValues);
-
+console.log(formValues)
       // const result=await createIdea(prevState,formData,pitch)
 
       // console.log(result)
+      // if (Result.status === "SUCCESS") {
+      //   router.push(`/startup/${result.id}`);
+      //   return result
+      // }
     } catch (error) {
-      console.log(error);
-    } finally {
+      if (error instanceof z.ZodError) {
+        const fieldErrors = error.flatten().fieldErrors;
+        setErrors(fieldErrors as unknown as Record<string, string>);
+        return { ...prevState, error: "Validation failed", status: "ERROR" };
+      }
+      return {
+        ...prevState,
+        error: "An unexpected error has occured",
+        status: "ERROR",
+      };
     }
   };
   const [state, formAction, isPending] = useActionState(handleFormSubmit, {
@@ -40,13 +50,12 @@ const StartupForm = () => {
     status: "INITIAL",
   });
   return (
-    <form action={() => {}} className="startup-form">
+    <form action={formAction} className="startup-form">
       <div>
         <label htmlFor="title" className="startup-form_label">
           Title
         </label>
         <Input
-          type="text"
           id="title"
           name="title"
           className="startup-form_input"
@@ -76,7 +85,6 @@ const StartupForm = () => {
           Category
         </label>
         <Input
-          type="text"
           id="category"
           name="category"
           className="startup-form_input"
@@ -92,7 +100,6 @@ const StartupForm = () => {
           Image URL
         </label>
         <Input
-          type="text"
           id="link"
           name="link"
           className="startup-form_input"
